@@ -1,17 +1,50 @@
-name: Unzip project
-on: workflow_dispatch
-permissions:
-  contents: write
+name: Build Kashif APK
+on:
+  push:
+  workflow_dispatch:
+
 jobs:
-  unzip:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: |
-          unzip -o kashif-project.zip -x ".github/*"
-          rm kashif-project.zip
-          git config user.name "bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add -A
-          git commit -m "Add project files"
-          git push
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y zip unzip python3-pip openjdk-17-jdk
+          pip install buildozer cython
+
+      - name: Unzip project
+        run: |
+          if [ -f kashef-project.zip ]; then
+            unzip -o kashef-project.zip
+            ls -la
+          else
+            echo "zip not found"
+            ls -la
+          fi
+
+      - name: Build APK
+        run: |
+          if [ -f buildozer.spec ]; then
+            buildozer android debug
+          else
+            find . -name "buildozer.spec"
+            cd $(find . -name "buildozer.spec" -exec dirname {} \; | head -n 1)
+            buildozer android debug
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kashif-APK
+          path: |
+            **/*.apk
+            bin/*.apk
